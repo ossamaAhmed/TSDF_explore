@@ -22,7 +22,7 @@ class SDF(object):
         self.training_set = pickle.load(open("./data/SDF/training/pickled/maps", "rb"))
         self.validation_set = pickle.load(open("./data/SDF/validation/pickled/maps", "rb"))
         print("Finished loading data")
-        self.dataloader = torch.utils.data.DataLoader(torch.from_numpy(self.training_set), batch_size=32,
+        self.dataloader = torch.utils.data.DataLoader(torch.from_numpy(self.training_set), batch_size=5,
                                                       shuffle=True, num_workers=4)
         self.testloader = torch.utils.data.DataLoader(torch.from_numpy(self.validation_set), batch_size=4,
                                                       shuffle=True, num_workers=2)
