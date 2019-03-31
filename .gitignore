@@ -1,4 +1,5 @@
 *.pyc
 __pycache__
 runs/
-
+utils/sdf_generation/output/validation/raw/
+utils/sdf_generation/output/training/raw/
