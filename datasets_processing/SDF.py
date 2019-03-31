@@ -18,7 +18,6 @@ class SDF(object):
 
     def _prepare_data(self):
         print("Loading data now")
-        print(os.getcwd())
         self.training_set = pickle.load(open("./data/SDF/training/pickled/maps", "rb"))
         self.validation_set = pickle.load(open("./data/SDF/validation/pickled/maps", "rb"))
         print("Finished loading data")
