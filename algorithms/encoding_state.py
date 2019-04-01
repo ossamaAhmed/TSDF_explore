@@ -33,8 +33,8 @@ class encodingState(object):
                 sdf_maps = Variable(sdf_maps).cuda()
                 sdf_maps = sdf_maps.float()
                 # ===================forward=====================
-                sdf_maps = sdf_maps[:,:,:,None]
-                sdf_maps = sdf_maps.permute(0, 3, 1, 2)
+                # sdf_maps = sdf_maps[:,:,:,None]
+                # sdf_maps = sdf_maps.permute(0, 3, 1, 2)
                 output = model(sdf_maps)
                 loss = torch.mean(torch.abs((output - sdf_maps)**2))
                 # ===================backward====================

@@ -35,7 +35,7 @@ class StateEncoderDecoder(nn.Module):
     def __init__(self):
         super(StateEncoderDecoder, self).__init__()
         self.encode_features = nn.Sequential(
-            BasicBlock(kernel_size=7, in_channels=1, out_channels=16),
+            BasicBlock(kernel_size=7, in_channels=2, out_channels=16),
             BasicBlock(kernel_size=5, in_channels=16, out_channels=32),
             BasicBlock(kernel_size=3, in_channels=32, out_channels=16),
             BasicBlock(kernel_size=3, in_channels=16, out_channels=16))
