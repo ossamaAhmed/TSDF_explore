@@ -35,7 +35,7 @@ class SDF(object):
 
     def _randomize_unknown_spaces(self, data):
         output = np.expand_dims(data, axis=1)
-        unknows_space_indicator = np.ones(shape=output.shape, dtype=np.float32)
+        unknown_space_indicator = np.ones(shape=output.shape, dtype=np.float32)
         map_width = output.shape[2]
         map_length = output.shape[3]
         number_of_unknown_blobs = 10
@@ -44,8 +44,9 @@ class SDF(object):
             col_indicies = np.random.randint(0, map_length, size=(2,))
             row_indicies.sort()
             col_indicies.sort()
-            unknows_space_indicator[:, 0, row_indicies[0]:row_indicies[1], col_indicies[0]:col_indicies[1]] = 0
-        output = np.concatenate((output, unknows_space_indicator), axis=1)
+            unknown_space_indicator[:, 0, row_indicies[0]:row_indicies[1], col_indicies[0]:col_indicies[1]] = 0
+            output[:, 0, row_indicies[0]:row_indicies[1], col_indicies[0]:col_indicies[1]] = 0
+        output = np.concatenate((output, unknown_space_indicator), axis=1)
         return output
 
     def _truncate_distances(self):

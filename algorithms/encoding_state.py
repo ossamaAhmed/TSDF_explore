@@ -7,6 +7,9 @@ from models.state_encoder_decoder_v1 import StateEncoderDecoder
 from datasets_processing.SDF import SDF
 from torchvision.utils import save_image
 from tensorboardX import SummaryWriter
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 
 class encodingState(object):
@@ -16,15 +19,21 @@ class encodingState(object):
         self._dataset = SDF()
         self.tf_writer = SummaryWriter()
 
-    def _to_img(self, x):
-        # x = 0.5 * (x+1) #to increase the contrast kind of
-        x = x.clamp(0, 1)
-        x = x.view(x.size(0), 1, 28, 28)
-        return x
+    def _visualize_dataset(self, original_input, decoded_output):
+        #choose a random image
+        random_im_index = np.random.randint(0, decoded_output.shape[0])
+        test_map = original_input[random_im_index]
+        output = decoded_output[random_im_index]
+        norm_input = np.max(test_map)
+        norm_output = np.max(output)
+        norm = np.max([norm_input, norm_output])
+        sns.heatmap(test_map[0, :, :]/norm)
+        plt.show()
+        sns.heatmap(output[0, :, :] / norm)
+        plt.show()
 
     def train(self):
         model = StateEncoderDecoder().cuda()
-        # distance = nn.MSELoss()
         optimizer = torch.optim.Adam(model.parameters(), weight_decay=1e-5)
         traininig_dataset_length = len(self._dataset.dataloader.dataset)
         for epoch in range(self._num_epochs):
@@ -33,8 +42,6 @@ class encodingState(object):
                 sdf_maps = Variable(sdf_maps).cuda()
                 sdf_maps = sdf_maps.float()
                 # ===================forward=====================
-                # sdf_maps = sdf_maps[:,:,:,None]
-                # sdf_maps = sdf_maps.permute(0, 3, 1, 2)
                 output = model(sdf_maps)
                 loss = torch.mean(torch.abs((output - sdf_maps)**2))
                 # ===================backward====================
@@ -45,8 +52,7 @@ class encodingState(object):
             # ===================log========================
             self.tf_writer.add_scalar('data/loss', loss_sum / traininig_dataset_length, epoch)
             if epoch % 5 == 0:
+                self._visualize_dataset(sdf_maps.cpu().data.numpy(), output.cpu().data.numpy())
                 print('epoch [{}/{}], loss:{:.4f}'.format(epoch + 1, self._num_epochs, loss.data))
-                # pic = self._to_img(output.cpu().data)
-                # save_image(output.cpu().data, './data/image_gen_{}.png'.format(epoch))
         torch.save(model.state_dict(), './pretrained_models/state_autoencoder_v1.pth')
         self.tf_writer.close()
