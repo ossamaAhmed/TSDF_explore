@@ -98,7 +98,11 @@ classdef SDFMap < handle
 
                 dist = [dist ; dist_row];
             end
-            obj.values = dist.*poly_bool;
+            % Unsigned distance
+            %obj.values = dist.*poly_bool;
+            % Signed distance
+            obj.values = dist;
+            obj.values(~poly_bool) = -1 * obj.values(~poly_bool);
         end
         
         function plot(obj)
