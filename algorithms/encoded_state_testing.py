@@ -56,5 +56,3 @@ class encodingState(object):
                 print('epoch [{}/{}], loss:{:.4f}'.format(epoch + 1, self._num_epochs, loss.data))
         torch.save(model.state_dict(), './pretrained_models/state_autoencoder_v1.pth')
         self.tf_writer.close()
-
-    def test(self):

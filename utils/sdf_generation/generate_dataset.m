@@ -35,13 +35,13 @@ sdf_params.voxel_dim = voxel_dim;
 %% Getting data from the map
 
 % Folder to write in
-output_root = '/home/ossama/Development/PLR/asldoc-2019-plr-ossama-yimeng/sdf_generation/output';
+output_root = '/home/ossama/Development/PLR/asldoc-2019-plr-ossama-yimeng/utils/sdf_generation/output';
 training_dir = strcat(output_root, '/training/raw');
 validation_dir = strcat(output_root, '/validation/raw');
 
 % Number of maps to generate
-n_training = 10; %400;
-n_validation = 2; %50;
+n_training = 1500; %400;
+n_validation = 500; %50;
 
 % Object to do creation
 dataset_creator = DatasetCreator(environment_params, sdf_params);
