@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="ISO-8859-15"?>
+<launch>
+  <node name="voxblox_rl_simulator" pkg="voxblox_rl_simulator" type="voxblox_rl_simulator" output="screen" args="--alsologtostderr --v=1" clear_params="true">
+
+    <!-- ROS INTERFACE PARAMS -->
+    <param name="submap_pub_topic" value="simulation/submap"/>
+    <param name="submap_pub_queue_size" value="100"/>
+    <param name="submap_pub_latch" value="true"/>
+
+    <param name="reward_pub_topic" value="simulation/reward"/>
+    <param name="reward_pub_queue_size" value="100"/>
+    <param name="reward_pub_latch" value="true"/>
+
+    <param name="pose_viz_pub_topic" value="simulation/pose_visualization"/>
+    <param name="pose_viz_pub_queue_size" value="100"/>
+    <param name="pose_viz_pub_latch" value="true"/>
+
+    <param name="action_sub_topic" value="simulation/action"/>
+    <param name="action_sub_queue_size" value="100"/>
+
+    <!-- Resets the simulation and generates a new world. -->
+    <param name="reset_srv_topic" value="simulation/reset"/>
+    <!-- Resets only the observed map, keeps the world and samples a new starting position. -->
+    <param name="reset_observed_map_srv_topic" value="simulation/reset_observed_map"/>
+    <!-- Move robot based on a 6DOF transformation. -->
+    <param name="move_srv_topic" value="simulation/move"/>
+    <!-- Start a random walk with n steps from the current position. -->
+    <param name="random_walk_srv_topic" value="simulation/random_walk"/>
+
+    <!-- VISUALIZATION -->
+    <!-- Disables all simulation specific visualizations to speed up the
+    simulation. This, however, will not affect the visualizations of the
+    ESDF Server and you need to set the update mesh interval to 0 to disable
+    the visualization completely. -->
+    <param name="sim_disable_all_sim_visualization" value="false"/>
+    <!-- Determines how often mesh and esdf are updated,
+    but since collisions are checked against ground truth,
+    these params only influence the visualization, not the actual planning.
+    Set to 0 to disable this for extra speed. -->
+    <param name="sim_update_esdf_and_mesh_every_nth_viewpoint" value="0"/>
+    <!-- If enabled, this publishes slices and a point cloud representing
+    the whole state of the grid. This is expensive. -->
+    <param name="publish_slices" value="true"/>
+    <param name="publish_pointclouds" value="true"/>
+    <!-- This influences the timer inside the ESDF server that triggers a
+    mesh update. Set to 0 to disable visualization. -->
+    <param name="update_mesh_every_n_sec" value="0.0"/>
+    <!-- Color mode of voxblox mesh. Cool options: [lambert, normals]-->
+    <param name="color_mode" value="normals"/>
+
+    <!-- VOXBLOX PARAMS -->
+    <!-- Core params -->
+    <param name="tsdf_voxel_size" value="0.2"/>
+    <param name="truncation_distance" value="0.4" />
+    <param name="tsdf_voxels_per_side" value="16"/>
+    <param name="voxel_carving_enabled" value="true"/>
+    <!-- Integrator settings optimizing for large voxel sizes. -->
+    <param name="use_const_weight" value="true" />
+    <param name="use_weight_dropoff" value="true" />
+    <!-- Maximum ray length that is integrated.
+    Should match the 'sim_depth_camera_max_range_m' param -->
+    <param name="max_ray_length_m" value="6.0" />
+    <param name="world_frame" value="world"/>
+    <!-- Type of TSDF integrator used. -->
+    <param name="method" value="fast" />
+    <!-- If enabled both the occupied and clear sphere radius settings are active. -->
+    <param name="clear_sphere_for_planning" value="true"/>
+    <!-- Radius of sphere where all unknown space is set to occupied.
+    Not needed here, set to 0. -->
+    <param name="occupied_sphere_radius" value="0.0"/>
+    <!-- Radius around robot that is set to free space. Needs to be bigger or
+    equal than the robot radius. Should probably be set to equal.-->
+    <param name="clear_sphere_radius" value="0.3"/>
+    <!-- Needs to be bigger or equal than the robot radius.-->
+    <param name="default_distance_m" value="1.0"/>
+
+    <!-- SIMULATION PARAMS -->
+    <!-- Types of objects -->
+    <param name="sim_add_cylinders" value="true"/>
+    <param name="sim_add_spheres" value="true"/>
+    <param name="sim_add_cubes" value="true"/>
+    <!-- Map size -->
+    <param name="sim_map_boundary_max_x" value="25"/>
+    <param name="sim_map_boundary_max_y" value="30"/>
+    <param name="sim_map_boundary_max_z" value="4"/>
+    <param name="sim_map_boundary_min_x" value="-10"/>
+    <param name="sim_map_boundary_min_y" value="-2"/>
+    <param name="sim_map_boundary_min_z" value="-3"/>
+    <!-- Object number and placement -->
+    <param name="sim_max_number_objects_per_type" value="20"/>
+    <param name="sim_max_size_object_relative_to_map" value="0.3"/>
+    <param name="sim_min_distance_to_map_boundary" value="0.2"/>
+    <param name="sim_min_object_size" value="1.0"/>
+    <!-- Viewpoint sampling (simulates the Pico MONSTAR sensor)-->
+    <param name="sim_depth_camera_resolution_width" value="352"/>
+    <param name="sim_depth_camera_resolution_height" value="287"/>
+    <param name="sim_depth_camera_fov_h_rad" value="1.745329252"/> <!--100deg -->
+    <param name="sim_depth_camera_max_range_m" value="6.0"/>
+    <param name="sim_viewpoint_sampling_angle_delta_rad" value="0.26"/> <!-- 15 deg -->
+    <param name="sim_viewpoint_sampling_position_delta_m" value="0.15"/>
+
+    <!-- Side length of local submap to be published after every action. -->
+    <param name="sim_local_submap_side_length_to_publish_m" value="25.6"/>
+    <!-- height of local submap to be published after every action. Set to 0 for 2D submap. -->
+    <param name="sim_local_submap_height_to_publish_m" value="0"/>
+
+    <!-- SIMULATION PLANNING PARAMS -->
+    <param name="sim_free_space_around_starting_position_m" value="1.0"/>
+    <!-- Robot collision check radius -->
+    <param name="sim_robot_radius_m" value="0.3"/>
+    <!-- Determines how often a new pose is sampled during the random walk. -->
+    <param name="sim_random_walk_num_steps" value="100"/>
+  </node>
+</launch>
