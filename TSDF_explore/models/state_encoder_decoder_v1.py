@@ -2,7 +2,6 @@ __author__ = 'Ossama'
 
 import torch.nn as nn
 import torch.nn.functional as F
-import copy
 
 
 class BasicBlock(nn.Module):
@@ -67,10 +66,18 @@ class StateEncoderDecoder(nn.Module):
         )
 
     def forward(self, x):
+        out = self.encode(x)
+        out = self.decode(out)
+        return out
+
+    def encode(self, x):
         out = self.encode_features(x)
         out = out.view(out.size(0), -1)
         out = self.encoder_output(out)
-        out = self.bottleneck(out)
+        return out
+
+    def decode(self, x):
+        out = self.bottleneck(x)
         out = out.view(out.size(0), 16, 8, 8)
         out = self.decoder_output(out)
 

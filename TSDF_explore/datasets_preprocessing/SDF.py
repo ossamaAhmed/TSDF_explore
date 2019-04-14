@@ -18,15 +18,16 @@ class SDF(object):
 
     def _prepare_data(self):
         print("Loading data now")
-        self.training_set = pickle.load(open("./data/SDF/training/pickled/maps", "rb"))
-        self.validation_set = pickle.load(open("./data/SDF/validation/pickled/maps", "rb"))
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        self.training_set = pickle.load(open(os.path.join(current_dir, "../data/SDF/training/pickled/maps"), "rb"))
+        self.validation_set = pickle.load(open(os.path.join(current_dir, "../data/SDF/training/pickled/maps"), "rb"))
         self.training_set = self._randomize_unknown_spaces(self.training_set)
         self.validation_set = self._randomize_unknown_spaces(self.validation_set)
         print("Finished loading data")
         self.dataloader = torch.utils.data.DataLoader(torch.from_numpy(self.training_set), batch_size=5,
                                                       shuffle=True, num_workers=4)
-        self.testloader = torch.utils.data.DataLoader(torch.from_numpy(self.validation_set), batch_size=4,
-                                                      shuffle=True, num_workers=2)
+        self.testloader = torch.utils.data.DataLoader(torch.from_numpy(self.validation_set), batch_size=5,
+                                                      shuffle=True, num_workers=4)
 
     def _visualize_dataset(self, start, end):
         for i in range(start, end):

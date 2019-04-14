@@ -2,18 +2,19 @@ __author__ = 'Ossama'
 
 import torch
 from torch.autograd import Variable
-from TSDF_explore.models import StateEncoderDecoder
-from TSDF_explore.datasets_preprocessing import SDF
+from TSDF_explore.models.state_encoder_decoder_v1 import StateEncoderDecoder
+from TSDF_explore.datasets_preprocessing.SDF import SDF
 from tensorboardX import SummaryWriter
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
+from TSDF_explore.policies.policy_loader import ModelLoader
+import os
 
 
 class encodingState(object):
     def __init__(self):
         # defining experiment params
-        self._num_epochs = 10
         self._dataset = SDF()
         self.tf_writer = SummaryWriter()
 
@@ -30,11 +31,11 @@ class encodingState(object):
         sns.heatmap(output[0, :, :] / norm)
         plt.show()
 
-    def train(self):
+    def train(self, num_epochs, model_path):
         model = StateEncoderDecoder().cuda()
         optimizer = torch.optim.Adam(model.parameters(), weight_decay=1e-5)
         traininig_dataset_length = len(self._dataset.dataloader.dataset)
-        for epoch in range(self._num_epochs):
+        for epoch in range(num_epochs):
             loss_sum = 0
             for sdf_maps in self._dataset.dataloader:
                 sdf_maps = Variable(sdf_maps).cuda()
@@ -51,9 +52,25 @@ class encodingState(object):
             self.tf_writer.add_scalar('data/loss', loss_sum / traininig_dataset_length, epoch)
             if epoch % 10 == 0:
                 self._visualize_dataset(sdf_maps.cpu().data.numpy(), output.cpu().data.numpy())
-                print('epoch [{}/{}], loss:{:.4f}'.format(epoch + 1, self._num_epochs, loss.data))
-        torch.save(model.state_dict(), './pretrained_models/state_autoencoder_v1.pth')
+                print('epoch [{}/{}], loss:{:.4f}'.format(epoch + 1,num_epochs, loss.data))
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        torch.save(model.state_dict(), os.path.join(current_dir, "..", ))
         self.tf_writer.close()
 
-    def test(self):
-        pass
+    def test(self, model_path):
+        model_loader = ModelLoader(model_class="state_encoder_v1",
+                                   trained_model_path=model_path)
+        model = model_loader.get_inference_model()
+        testing_dataset_length = len(self._dataset.testloader.dataset)
+        #test now
+        validation_loss_sum = 0
+        for sdf_maps in self._dataset.testloader:
+            sdf_maps = Variable(sdf_maps).cuda()
+            sdf_maps = sdf_maps.float()
+            # ===================forward=====================
+            output = model(sdf_maps)
+            loss = torch.mean(torch.abs((output - sdf_maps) ** 2))
+            # ===================backward====================
+            validation_loss_sum += loss
+        print("Final Validation Loss: {:.4f}\n".format(validation_loss_sum/testing_dataset_length))
+        return validation_loss_sum/testing_dataset_length

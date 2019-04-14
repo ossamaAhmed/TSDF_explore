@@ -11,7 +11,6 @@ class Robot(object):
         self.accumulated_observed_voxels = 0
         self.default_action = [1e-5, 0, 0, 0, 0, 0]
         self.stuck_counter = 0
-        self.current_position = []
         self.current_TSDF_map = None
         self.observations = None
         return
@@ -20,7 +19,14 @@ class Robot(object):
         pass
 
     def reset(self):
-        pass
+        self.accumulated_observed_voxels = 0
+        self.observations = None
+        self.current_position = None
+        self.current_velocity = None
+        self.is_colliding = False
+        self.stuck_counter = 0
+        self.current_TSDF_map = None
+        return
 
     def move(self):
         pass

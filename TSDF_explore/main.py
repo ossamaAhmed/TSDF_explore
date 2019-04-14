@@ -1,47 +1,50 @@
-import rospy
-from voxblox_rl_simulator.srv import *
-from geometry_msgs.msg import Vector3, Quaternion, Transform, TransformStamped
 import numpy as np
 import gym
 import gym_TSDF_explore
 from stable_baselines.common.policies import MlpPolicy
 from stable_baselines.common.vec_env import DummyVecEnv
 from stable_baselines import PPO2
+from TSDF_explore.state_encoder.encoding_state import encodingState
+from TSDF_explore.policies.policy_loader import ModelLoader
 import time
 
 
-def main():
+def train_encoder():
+    state_model = encodingState()
+    state_model.train(num_epochs=2, model_path="pretrained_models/state_autoencoder_v2.pth")
+
+
+def test_encoder():
+    state_model = encodingState()
+    state_model.test(model_path="pretrained_models/state_autoencoder_v2.pth")
+
+
+def train_exploring_policy():
     env = gym.make('TSDF_explore-v0')
+    model_loader = ModelLoader(model_class="state_encoder_v1",
+                               trained_model_path="pretrained_models/state_autoencoder_v2.pth")
+    env.set_observations_encoder(model_loader.get_inference_model())
     env = DummyVecEnv([lambda: env])
 
     model = PPO2(MlpPolicy, env, verbose=1, tensorboard_log="./logs/")
-    model.learn(total_timesteps=1000)
+    model.learn(total_timesteps=100000)
+    print("Finished training")
+    return model, env
 
-    # obs = env.reset()
-    # for i in range(1000):
-    #     action, _states = model.predict(obs)
-    #     obs, rewards, done, info = env.step(action)
-    #     if done:
-    #         print("DIED")
-    #         time.sleep(20)
 
-    # current_observations = env.reset()
-    # print(current_observations)
-    # print(np.min(current_observations[1]))
-    # print(np.max(current_observations[1]))
-    # for i in range(100000):
-    #     rand_sample = np.random.randint(0,20, size=[3])
-    #     rand_sample = np.append(rand_sample, [0, 0, 0])
-    #     ob, reward, done, _ = env.step(rand_sample)
-    #     print(np.min(ob[1]))
-    #     print(np.max(ob[1]))
-    #     print(ob)
-    #     print(reward)
-    #     print(done)
-    # env.close()
-    # state_model = encodingState()
-    # state_model.train()
-    # dataset = SDF()
+def test_exploring_policy(env, model):
+    obs = env.reset()
+    for i in range(1000):
+        action, _states = model.predict(obs)
+        obs, rewards, done, info = env.step(action)
+        if done:
+            print("DIED")
+            time.sleep(20)
+
+
+def main():
+    test_encoder()
+    # train_exploring_policy()
 
 
 if __name__ == "__main__":
