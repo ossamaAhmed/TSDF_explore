@@ -20,7 +20,7 @@ class SDF(object):
         print("Loading data now")
         current_dir = os.path.dirname(os.path.abspath(__file__))
         self.training_set = pickle.load(open(os.path.join(current_dir, "../data/SDF/training/pickled/maps"), "rb"))
-        self.validation_set = pickle.load(open(os.path.join(current_dir, "../data/SDF/training/pickled/maps"), "rb"))
+        self.validation_set = pickle.load(open(os.path.join(current_dir, "../data/SDF/testing/pickled/maps"), "rb"))
         self.training_set = self._randomize_unknown_spaces(self.training_set)
         self.validation_set = self._randomize_unknown_spaces(self.validation_set)
         print("Finished loading data")

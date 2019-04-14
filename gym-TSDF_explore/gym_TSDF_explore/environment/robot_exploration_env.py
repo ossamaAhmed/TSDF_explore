@@ -48,10 +48,14 @@ class RobotEnv(gym.Env):
         self.action_space = spaces.Box(low=low, high=high, dtype=np.float32)
         self.observation_space = spaces.Box(-1000, 1000, shape=[256, 256], dtype=np.float32)
         self.observations_encoder = None
+        self.set_gpu_on = False
         return
 
     def render(self, mode='human'):
         return
+
+    def set_gpu(self):
+        self.set_gpu_on = True
 
     def set_observations_encoder(self, model):
         self.observations_encoder = model
@@ -100,7 +104,10 @@ class RobotEnv(gym.Env):
             #prepare data for encoder
             inputs = self._set_unknown_spaces(self.observations['submap'][1:, 1:])
             with torch.no_grad():
-                inputs = Variable(torch.from_numpy(inputs)).cuda()
+                if self.set_gpu_on:
+                    inputs = Variable(torch.from_numpy(inputs)).cuda()
+                else:
+                    inputs = Variable(torch.from_numpy(inputs))
                 inputs = inputs.float()
                 result = self.observations_encoder.encode(inputs)
             return result.cpu().data.numpy()

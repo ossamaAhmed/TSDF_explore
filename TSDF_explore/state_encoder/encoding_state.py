@@ -31,14 +31,20 @@ class encodingState(object):
         sns.heatmap(output[0, :, :] / norm)
         plt.show()
 
-    def train(self, num_epochs, model_path):
-        model = StateEncoderDecoder().cuda()
+    def train(self, num_epochs, model_path, gpu=True):
+        if gpu:
+            model = StateEncoderDecoder().cuda()
+        else:
+            model = StateEncoderDecoder()
         optimizer = torch.optim.Adam(model.parameters(), weight_decay=1e-5)
         traininig_dataset_length = len(self._dataset.dataloader.dataset)
         for epoch in range(num_epochs):
             loss_sum = 0
             for sdf_maps in self._dataset.dataloader:
-                sdf_maps = Variable(sdf_maps).cuda()
+                if gpu:
+                    sdf_maps = Variable(sdf_maps).cuda()
+                else:
+                    sdf_maps = Variable(sdf_maps)
                 sdf_maps = sdf_maps.float()
                 # ===================forward=====================
                 output = model(sdf_maps)
@@ -54,23 +60,26 @@ class encodingState(object):
                 self._visualize_dataset(sdf_maps.cpu().data.numpy(), output.cpu().data.numpy())
                 print('epoch [{}/{}], loss:{:.4f}'.format(epoch + 1,num_epochs, loss.data))
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        torch.save(model.state_dict(), os.path.join(current_dir, "..", ))
+        torch.save(model.state_dict(), os.path.join(current_dir, "..", model_path))
         self.tf_writer.close()
 
-    def test(self, model_path):
+    def test(self, model_path, gpu=True):
         model_loader = ModelLoader(model_class="state_encoder_v1",
-                                   trained_model_path=model_path)
+                                   trained_model_path=model_path,
+                                   gpu=gpu)
         model = model_loader.get_inference_model()
         testing_dataset_length = len(self._dataset.testloader.dataset)
         #test now
         validation_loss_sum = 0
         for sdf_maps in self._dataset.testloader:
-            sdf_maps = Variable(sdf_maps).cuda()
+            if gpu:
+                sdf_maps = Variable(sdf_maps, volatile=True).cuda()
+            else:
+                sdf_maps = Variable(sdf_maps, volatile=True)
             sdf_maps = sdf_maps.float()
             # ===================forward=====================
             output = model(sdf_maps)
             loss = torch.mean(torch.abs((output - sdf_maps) ** 2))
-            # ===================backward====================
             validation_loss_sum += loss
         print("Final Validation Loss: {:.4f}\n".format(validation_loss_sum/testing_dataset_length))
         return validation_loss_sum/testing_dataset_length
