@@ -6,10 +6,14 @@ class Robot(object):
         self.size_y = 10
         self.current_position = None
         self.current_velocity = None
-        self.motor_off = None
         self.current_observed_voxels = None
-        self.discovered_voxels = None
         self.is_colliding = False
+        self.accumulated_observed_voxels = 0
+        self.default_action = [1e-5, 0, 0, 0, 0, 0]
+        self.stuck_counter = 0
+        self.current_position = []
+        self.current_TSDF_map = None
+        self.observations = None
         return
 
     def initialize(self):
@@ -19,7 +23,6 @@ class Robot(object):
         pass
 
     def move(self):
-
         pass
 
     def set_dynamics(self):
@@ -28,14 +31,23 @@ class Robot(object):
     def get_dynamics(self):
         pass
 
-    def set_observations(self):
-        pass
+    def set_observations(self, observations):
+        self.accumulated_observed_voxels += observations['newly_observed_voxels']
+        if observations['collsion']:
+            self.stuck_counter += 1
+            self.is_colliding = True
+        else:
+            self.stuck_counter = 0
+            self.is_colliding = False
+        self.current_observed_voxels = observations['newly_observed_voxels']
+        self.current_TSDF_map = observations['submap']
+        self.observations = observations
+        return
 
     def get_observations(self):
-        pass
+        return self.observations
 
-    def stop_movement(self):
-        pass
-
-    def is_stationary(self):
-        pass
+    def is_stuck(self):
+        if self.stuck_counter >= 1:
+            return True
+        return False

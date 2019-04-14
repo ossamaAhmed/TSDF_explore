@@ -5,4 +5,5 @@ setup(name='gym_TSDF_explore',
       install_requires=['gym',
                         'rospy',
                         'defusedxml',
-                        'netifaces'])
+                        'netifaces',
+                        'rospkg'])
