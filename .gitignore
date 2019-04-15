@@ -2,3 +2,4 @@
 __pycache__
 utils/sdf_generation/output/validation/raw/
 utils/sdf_generation/output/training/raw/
+.idea/
