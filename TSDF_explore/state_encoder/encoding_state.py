@@ -12,13 +12,19 @@ from TSDF_explore.policies.policy_loader import ModelLoader
 import os
 
 
-class encodingState(object):
-    def __init__(self):
+class EncodingState(object):
+    def __init__(self, do_randomize_unknown_spaces):
         # defining experiment params
-        self._dataset = SDF()
+        self._dataset = SDF(do_randomize_unknown_spaces=do_randomize_unknown_spaces)
         self.tf_writer = SummaryWriter()
 
-    def _visualize_dataset(self, original_input, decoded_output):
+    def _convert_plot_to_image(self, figure):
+        figure.canvas.draw()
+        data = np.fromstring(figure.canvas.tostring_rgb(), dtype=np.uint8, sep='')
+        data = data.reshape(figure.canvas.get_width_height()[::-1] + (3,))
+        return data
+
+    def _visualize_dataset(self, original_input, decoded_output, epoch):
         #choose a random image
         random_im_index = np.random.randint(0, decoded_output.shape[0])
         test_map = original_input[random_im_index]
@@ -26,10 +32,18 @@ class encodingState(object):
         norm_input = np.max(test_map)
         norm_output = np.max(output)
         norm = np.max([norm_input, norm_output])
-        sns.heatmap(test_map[0, :, :]/norm)
-        plt.show()
-        sns.heatmap(output[0, :, :] / norm)
-        plt.show()
+        #plotting
+        fig = plt.figure(figsize=(25, 10))
+        ax1 = plt.subplot2grid(shape=(1, 2), loc=(0, 0))
+        ax1.set_title('original_input')
+        sns.heatmap(test_map[0, :, :]/norm, ax=ax1)
+        ax2 = plt.subplot2grid(shape=(1, 2), loc=(0, 1))
+        ax2.set_title('decoded_result')
+        sns.heatmap(output[0, :, :] / norm, ax=ax2)
+        # plt.show()
+        self.tf_writer.add_image("intermediate_results", self._convert_plot_to_image(figure=fig),
+                                 global_step=epoch, dataformats='HWC')
+        return
 
     def train(self, num_epochs, model_path, gpu=True):
         if gpu:
@@ -57,12 +71,13 @@ class encodingState(object):
             # ===================log========================
             self.tf_writer.add_scalar('data/loss', loss_sum / traininig_dataset_length, epoch)
             if epoch % 10 == 0:
-                self._visualize_dataset(sdf_maps.cpu().data.numpy(), output.cpu().data.numpy())
+                self._visualize_dataset(sdf_maps.cpu().data.numpy(), output.cpu().data.numpy(), epoch=epoch)
                 print('epoch [{}/{}], loss:{:.4f}'.format(epoch + 1,num_epochs, loss.data))
         current_dir = os.path.dirname(os.path.abspath(__file__))
         torch.save(model.state_dict(), os.path.join(current_dir, "..", model_path))
         self.tf_writer.close()
 
+    #TODO:this function is not giving the same accuracy every time
     def test(self, model_path, gpu=True):
         model_loader = ModelLoader(model_class="state_encoder_v1",
                                    trained_model_path=model_path,
@@ -73,13 +88,16 @@ class encodingState(object):
         validation_loss_sum = 0
         for sdf_maps in self._dataset.testloader:
             if gpu:
-                sdf_maps = Variable(sdf_maps, volatile=True).cuda()
+                sdf_maps = Variable(sdf_maps).cuda()
             else:
-                sdf_maps = Variable(sdf_maps, volatile=True)
+                sdf_maps = Variable(sdf_maps)
             sdf_maps = sdf_maps.float()
             # ===================forward=====================
-            output = model(sdf_maps)
-            loss = torch.mean(torch.abs((output - sdf_maps) ** 2))
-            validation_loss_sum += loss
+            with torch.no_grad():
+                output = model(sdf_maps)
+                loss = torch.mean(torch.abs((output - sdf_maps) ** 2))
+                print("loss", loss)
+                validation_loss_sum += loss
+        print(validation_loss_sum)
         print("Final Validation Loss: {:.4f}\n".format(validation_loss_sum/testing_dataset_length))
         return validation_loss_sum/testing_dataset_length

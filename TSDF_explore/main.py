@@ -4,18 +4,18 @@ import gym_TSDF_explore
 from stable_baselines.common.policies import MlpPolicy
 from stable_baselines.common.vec_env import DummyVecEnv
 from stable_baselines import PPO2
-from TSDF_explore.state_encoder.encoding_state import encodingState
+from TSDF_explore.state_encoder.encoding_state import EncodingState
 from TSDF_explore.policies.policy_loader import ModelLoader
 import time
 
 
 def train_encoder():
-    state_model = encodingState()
-    state_model.train(num_epochs=2, model_path="pretrained_models/state_autoencoder_v2.pth", gpu=False)
+    state_model = EncodingState(do_randomize_unknown_spaces=True)
+    state_model.train(num_epochs=2, model_path="pretrained_models/state_autoencoder_v3.pth", gpu=False)
 
 
 def test_encoder():
-    state_model = encodingState()
+    state_model = EncodingState(do_randomize_unknown_spaces=False)
     state_model.test(model_path="pretrained_models/state_autoencoder_v1.pth", gpu=False)
 
 
@@ -24,7 +24,7 @@ def train_exploring_policy():
     model_loader = ModelLoader(model_class="state_encoder_v1",
                                trained_model_path="pretrained_models/state_autoencoder_v1.pth", gpu=False)
     env.set_observations_encoder(model_loader.get_inference_model())
-    # env.set_gpu()
+    env.set_gpu()
     env = DummyVecEnv([lambda: env])
 
     model = PPO2(MlpPolicy, env, verbose=1, tensorboard_log="./logs/")
@@ -45,7 +45,8 @@ def test_exploring_policy(env, model):
 
 def main():
     # test_encoder()
-    train_exploring_policy()
+    # train_exploring_policy()
+    train_encoder()
 
 
 if __name__ == "__main__":
