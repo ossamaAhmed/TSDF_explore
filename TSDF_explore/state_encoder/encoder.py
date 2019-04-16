@@ -94,17 +94,17 @@ class Autoencoder(nn.Module):
             BasicConv(32,64,3))
         self.encoder_output = nn.Sequential(
             nn.Dropout(p=0.1),
-            nn.Linear(128*128, 256),
+            nn.Linear(128*128, 512),
             nn.ReLU(True),
             nn.Dropout(p=0.1),
-            nn.Linear(256,128),
+            nn.Linear(512,256),
             nn.ReLU(True))
         self.decoder_input = nn.Sequential(
             # nn.Dropout(p=0.1),
-            nn.Linear(128,256),
+            nn.Linear(256,512),
             nn.ReLU(True),
             nn.Dropout(0.1),
-            nn.Linear(256,128*128),
+            nn.Linear(512,128*128),
             nn.ReLU(True))
         self.decoder_deconv = nn.Sequential(      
             BasicConv(64,32,3,isPooling=False,isUpsampling=True),
@@ -164,7 +164,7 @@ for epoch in range(num_epochs):
     tf_writer.add_scalar('data/loss', totalLoss/training_dataset_length, epoch)
     # f.writelines('epoch [{}/{}], loss:{:.4f}\n'.format(epoch+1, num_epochs, loss.data))
     if epoch % 10 == 0:
-        _tbX_visualizer(Variable(_data).data.cpu().numpy(),output.data.numpy(),tf_writer,epoch)
+        _tbX_visualizer(_data.cpu().data.numpy(),output.cpu().data.numpy(),tf_writer,epoch)
         print('epoch [{}/{}], loss:{:.4f}'.format(epoch+1, num_epochs, loss.data))
 tf_writer.close()
 # f.close()
