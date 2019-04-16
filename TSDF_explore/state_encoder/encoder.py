@@ -11,6 +11,7 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 import warnings
+from tensorboardX import SummaryWriter
 
 from loading_data import DataLoader
 
@@ -23,13 +24,42 @@ def visualizer(_input, _output):
     plt.figure(figsize=(20,5))
     ax1 = plt.subplot2grid((2,2),(0,0))
     sns.heatmap(input_map[0])
+    ax1.set_title('Masked input submap')
     ax2 = plt.subplot2grid((2,2),(0,1))
     sns.heatmap(output_map[0])
-    ax1 = plt.subplot2grid((2,2),(1,0))
+    ax2.set_title('Input mask')
+    ax3 = plt.subplot2grid((2,2),(1,0))
     sns.heatmap(input_map[1])
-    ax1 = plt.subplot2grid((2,2),(1,1))
+    ax3.set_title('Masked output submap')
+    ax4 = plt.subplot2grid((2,2),(1,1))
     sns.heatmap(input_map[1])
+    ax4.set_title('Output mask')
     plt.show()
+
+def _convert_plot_to_image(figure):
+    figure.canvas.draw()
+    data = np.fromstring(figure.canvas.tostring_rgb(), dtype=np.uint8, sep='')
+    data = data.reshape(figure.canvas.get_width_height()[::-1] + (3,))
+    return data
+
+def _tbX_visualizer(_input, _output, w, epoch):
+    _index = np.random.randint(0,_output.shape[0])
+    input_map = _input[_index]
+    output_map = _output[_index]
+    fig = plt.figure(figsize=(20,5))
+    ax1 = plt.subplot2grid((2,2),(0,0))
+    sns.heatmap(input_map[0])
+    ax1.set_title('Masked input submap')
+    ax2 = plt.subplot2grid((2,2),(0,1))
+    sns.heatmap(output_map[0])
+    ax2.set_title('Input mask')
+    ax3 = plt.subplot2grid((2,2),(1,0))
+    sns.heatmap(input_map[1])
+    ax3.set_title('Masked output submap')
+    ax4 = plt.subplot2grid((2,2),(1,1))
+    sns.heatmap(input_map[1])
+    ax4.set_title('Output mask')
+    w.add_image('intermediate_plots', _convert_plot_to_image(fig), global_step = epoch, dataformats='HWC')
 
 class BasicConv(nn.Module):
     def __init__(self,_in_channels, _out_channels, kernel_size,isPooling=True,isUpsampling=False):
@@ -97,6 +127,7 @@ class Autoencoder(nn.Module):
 warnings.filterwarnings("ignore")
 
 DL = DataLoader()
+tf_writer = SummaryWriter()
 # trainloader = []
 # for i in range(DL.training_data.size):
 #     trainloader.append(torch.from_numpy(DL.training_data[i]))
@@ -110,7 +141,9 @@ model = Autoencoder().cuda()
 distance = nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters(),weight_decay=1e-5)
 
-f = open('result','w')
+training_dataset_length = len(trainloader.dataset)
+
+# f = open('result','w')
 for epoch in range(num_epochs):
     totalLoss = 0
     for _data in trainloader:
@@ -127,10 +160,14 @@ for epoch in range(num_epochs):
         optimizer.step()
         totalLoss += loss
     # ===================log========================
-        #visualizer(data.numpy(),output.data.numpy())
-        f.writelines('epoch [{}/{}], loss:{:.4f}\n'.format(epoch+1, num_epochs, loss.data))
+    #visualizer(data.numpy(),output.data.numpy())
+    tf_writer.add_scalar('data/loss', totalLoss/training_dataset_length, epoch)
+    # f.writelines('epoch [{}/{}], loss:{:.4f}\n'.format(epoch+1, num_epochs, loss.data))
+    if epoch % 10 == 0:
+        _tbX_visualizer(Variable(_data).data.cpu().numpy(),output.data.numpy(),tf_writer,epoch)
         print('epoch [{}/{}], loss:{:.4f}'.format(epoch+1, num_epochs, loss.data))
-f.close()
+tf_writer.close()
+# f.close()
 torch.save(model.state_dict(),'trained_autoencoder.pth')
 
 # model = Autoencoder().cpu()
