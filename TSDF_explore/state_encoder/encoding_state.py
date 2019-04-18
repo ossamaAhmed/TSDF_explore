@@ -10,6 +10,7 @@
  """
 import torch
 from torch.autograd import Variable
+import torch.nn as nn
 from TSDF_explore.models.state_encoder_decoder_v1 import StateEncoderDecoder
 from TSDF_explore.datasets_preprocessing.SDF import SDF
 from tensorboardX import SummaryWriter
@@ -18,6 +19,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from TSDF_explore.policies.policy_loader import ModelLoader
 import os
+import warnings
 
 
 class EncodingState(object):
@@ -25,6 +27,7 @@ class EncodingState(object):
         # defining experiment params
         self._dataset = SDF(do_randomize_unknown_spaces=do_randomize_unknown_spaces)
         self.tf_writer = SummaryWriter()
+        warnings.filterwarnings("ignore")
 
     def _convert_plot_to_image(self, figure):
         figure.canvas.draw()
@@ -60,9 +63,11 @@ class EncodingState(object):
             model = StateEncoderDecoder()
         optimizer = torch.optim.Adam(model.parameters(), weight_decay=1e-5)
         traininig_dataset_length = len(self._dataset.dataloader.dataset)
+        distance = nn.MSELoss()
         for epoch in range(num_epochs):
             loss_sum = 0
             for sdf_maps in self._dataset.dataloader:
+                sdf_maps = sdf_maps[:, :, 0:-1, 0:-1]
                 if gpu:
                     sdf_maps = Variable(sdf_maps).cuda()
                 else:
@@ -70,7 +75,7 @@ class EncodingState(object):
                 sdf_maps = sdf_maps.float()
                 # ===================forward=====================
                 output = model(sdf_maps)
-                loss = torch.mean(torch.abs((output - sdf_maps)**2))
+                loss = distance(output, sdf_maps)
                 # ===================backward====================
                 optimizer.zero_grad()
                 loss.backward()
@@ -94,7 +99,9 @@ class EncodingState(object):
         testing_dataset_length = len(self._dataset.testloader.dataset)
         #test now
         validation_loss_sum = 0
+        distance = nn.MSELoss()
         for sdf_maps in self._dataset.testloader:
+            sdf_maps = sdf_maps[:, :, 0:-1, 0:-1]
             if gpu:
                 sdf_maps = Variable(sdf_maps).cuda()
             else:
@@ -103,7 +110,7 @@ class EncodingState(object):
             # ===================forward=====================
             with torch.no_grad():
                 output = model(sdf_maps)
-                loss = torch.mean(torch.abs((output - sdf_maps) ** 2))
+                loss = distance(output, sdf_maps)
                 print("loss", loss)
                 validation_loss_sum += loss
         print(validation_loss_sum)

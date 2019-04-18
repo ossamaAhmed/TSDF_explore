@@ -21,7 +21,7 @@ import time
 
 def train_encoder():
     state_model = EncodingState(do_randomize_unknown_spaces=True)
-    state_model.train(num_epochs=2, model_path="pretrained_models/state_autoencoder_v3.pth", gpu=False)
+    state_model.train(num_epochs=2, model_path="pretrained_models/state_autoencoder_v3.pth", gpu=True)
 
 
 def test_encoder():
@@ -32,7 +32,7 @@ def test_encoder():
 def train_exploring_policy():
     env = gym.make('TSDF_explore-v0')
     model_loader = ModelLoader(model_class="state_encoder_v1",
-                               trained_model_path="pretrained_models/state_autoencoder_v1.pth", gpu=False)
+                               trained_model_path="pretrained_models/state_autoencoder_v3.pth", gpu=False)
     env.set_observations_encoder(model_loader.get_inference_model())
     # env.set_gpu()
     env = DummyVecEnv([lambda: env])
