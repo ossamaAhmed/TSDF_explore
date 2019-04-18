@@ -19,13 +19,16 @@ import matplotlib.pyplot as plt
 
 
 class SDF(object):
-    def __init__(self, do_randomize_unknown_spaces):
+    def __init__(self, do_randomize_unknown_spaces, prepare_random_data=True):
         self.dataloader = None
         self.testloader = None
         self.training_set = None
         self.validation_set = None
         self.do_randomize_unknown_spaces = do_randomize_unknown_spaces
-        self._prepare_data()
+        if prepare_random_data:
+            self._prepare_data_random()
+        else:
+            self._prepare_data()
 
     def _prepare_data(self):
         print("Loading data now")
@@ -43,6 +46,33 @@ class SDF(object):
                                                       shuffle=True, num_workers=4)
         self.testloader = torch.utils.data.DataLoader(torch.from_numpy(self.validation_set), batch_size=64,
                                                       shuffle=False, num_workers=4)
+
+    #rl_map_valid
+    def _prepare_data_random(self):
+        print("Loading data now")
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        self.training_set = pickle.load(open(os.path.join(current_dir, "../data/SDF/training/pickled/rl_map_train"), "rb"))
+        self.training_set_mask = pickle.load(
+            open(os.path.join(current_dir, "../data/SDF/training/pickled/rl_mask_train"), "rb"))
+        self.validation_set = pickle.load(
+            open(os.path.join(current_dir, "../data/SDF/validation/pickled/rl_map_valid"), "rb"))
+        self.validation_set_mask = pickle.load(
+            open(os.path.join(current_dir, "../data/SDF/validation/pickled/rl_mask_valid"), "rb"))
+        print("Finished loading data")
+        print("Processing Masked Data...")
+        self.training_data = self.mask_map(self.training_set, self.training_set_mask)
+        print("Processing Masked Data...")
+        self.validation_data = self.mask_map(self.validation_set, self.validation_set_mask)
+        self.dataloader = torch.utils.data.DataLoader(torch.from_numpy(self.training_data), batch_size=5,
+                                                      shuffle=True, num_workers=4)
+        self.testloader = torch.utils.data.DataLoader(torch.from_numpy(self.validation_data), batch_size=64,
+                                                      shuffle=False, num_workers=4)
+
+    def mask_map(self, _map, _mask):
+        output = np.expand_dims(_map, axis=1)
+        output_mask = np.expand_dims(_mask, axis=1)
+        output = np.concatenate([output, output_mask], axis=1)
+        return output
 
     def _visualize_dataset(self, start, end):
         for i in range(start, end):

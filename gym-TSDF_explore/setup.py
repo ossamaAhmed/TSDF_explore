@@ -16,4 +16,5 @@ setup(name='gym_TSDF_explore',
                         'rospy',
                         'defusedxml',
                         'netifaces',
-                        'rospkg'])
+                        'rospkg',
+                        'transforms3d'])
