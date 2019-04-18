@@ -93,7 +93,7 @@
     <param name="sim_min_object_size" value="1.0"/>
     <!-- Viewpoint sampling (simulates the Pico MONSTAR sensor)-->
     <param name="sim_depth_camera_resolution_width" value="352"/>
-    <param name="sim_depth_camera_resolution_height" value="1"/>
+    <param name="sim_depth_camera_resolution_height" value="287"/>
     <param name="sim_depth_camera_fov_h_rad" value="1.745329252"/> <!--100deg -->
     <param name="sim_depth_camera_max_range_m" value="6.0"/>
     <param name="sim_viewpoint_sampling_angle_delta_rad" value="0.26"/> <!-- 15 deg -->
