@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-15"?>
 <launch>
-  <node name="voxblox_rl_simulator" pkg="voxblox_rl_simulator" type="voxblox_rl_simulator" output="screen" args="--alsologtostderr --v=1" clear_params="true">
+  <node name="voxblox_rl_simulator" pkg="voxblox_rl_simulator" type="voxblox_rl_simulator" output="log" args="--v=1" clear_params="true">
 
     <!-- ROS INTERFACE PARAMS -->
     <param name="submap_pub_topic" value="simulation/submap"/>
