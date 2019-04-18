@@ -53,8 +53,8 @@ class RobotEnv(gym.Env):
 
         self.robot = Robot(name='explorer')
         #TODO:define action space remember to add restriction of not moving
-        high = np.array([5.0, 5.0, 0.0, np.pi, np.pi, 0])
-        low = np.array([-5.0, -5.0, 0.0, -np.pi,-np.pi, 0])
+        high = np.array([5.0, 5.0, 0.0, np.pi, 0, 0])
+        low = np.array([-5.0, -5.0, 0.0, -np.pi, 0, 0])
         self.action_space = spaces.Box(low=low, high=high, dtype=np.float32)
         self.observation_space = spaces.Box(-1000, 1000, shape=[256, 256], dtype=np.float32)
         self.observations_encoder = None
