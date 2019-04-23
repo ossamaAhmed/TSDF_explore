@@ -21,7 +21,7 @@ import time
 
 def train_encoder():
     state_model = EncodingState(do_randomize_unknown_spaces=True)
-    state_model.train(num_epochs=2, model_path="pretrained_models/state_autoencoder_v3.pth", gpu=True)
+    state_model.train(num_epochs=500, model_path="pretrained_models/state_autoencoder_v3.pth", gpu=True)
 
 
 def test_encoder():
@@ -55,8 +55,8 @@ def test_exploring_policy(env, model):
 
 def main():
     # test_encoder()
-    train_exploring_policy()
-    # train_encoder()
+    # train_exploring_policy()
+    train_encoder()
     #ERROR: 0413 17:27:23.913967 10304 simulator.cc:487] Moving from -6.99358 0019.899 03.38787 to -7.11874 019.3573 003.1897...
 # I0413 17:27:23.914000 10304 simulator.cc:324] Shortest rotation between 1 0 0 and 000.999999 0.00127657 0000000000 is 0.0740187deg around 0 0 1
 # F0413 17:27:23.914049 10304 simulator.cc:337] Check failed: std::abs(Ci_p_Co_Cn.y()) < kEpsilon (1.52978e-05 vs. 1e-05)
