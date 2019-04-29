@@ -23,9 +23,12 @@ import warnings
 
 
 class EncodingState(object):
-    def __init__(self, do_randomize_unknown_spaces):
+    def __init__(self, do_randomize_unknown_spaces=False,
+                 prepare_random_data=False, prepare_data_from_matlab=False, prepare_data_from_sim=False):
         # defining experiment params
-        self._dataset = SDF(do_randomize_unknown_spaces=do_randomize_unknown_spaces)
+        self._dataset = SDF(do_randomize_unknown_spaces=do_randomize_unknown_spaces,
+                            prepare_random_data=prepare_random_data, prepare_data_from_matlab=prepare_data_from_matlab,
+                            prepare_data_from_sim=prepare_data_from_sim)
         self.tf_writer = SummaryWriter()
         warnings.filterwarnings("ignore")
 
@@ -44,13 +47,19 @@ class EncodingState(object):
         norm_output = np.max(output)
         norm = np.max([norm_input, norm_output])
         #plotting
-        fig = plt.figure(figsize=(25, 10))
-        ax1 = plt.subplot2grid(shape=(1, 2), loc=(0, 0))
+        fig = plt.figure(figsize=(30, 10))
+        ax1 = plt.subplot2grid(shape=(2, 2), loc=(0, 0))
         ax1.set_title('original_input')
         sns.heatmap(test_map[0, :, :]/norm, ax=ax1)
-        ax2 = plt.subplot2grid(shape=(1, 2), loc=(0, 1))
+        ax2 = plt.subplot2grid(shape=(2, 2), loc=(0, 1))
         ax2.set_title('decoded_result')
         sns.heatmap(output[0, :, :] / norm, ax=ax2)
+        ax3 = plt.subplot2grid(shape=(2, 2), loc=(1, 0))
+        ax3.set_title('original_input_second_channel')
+        sns.heatmap(test_map[1, :, :], ax=ax3)
+        ax4 = plt.subplot2grid(shape=(2, 2), loc=(1, 1))
+        ax4.set_title('decoded_result_second_channel')
+        sns.heatmap(output[1, :, :], ax=ax4)
         # plt.show()
         self.tf_writer.add_image("intermediate_results", self._convert_plot_to_image(figure=fig),
                                  global_step=epoch, dataformats='HWC')

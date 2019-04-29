@@ -19,12 +19,14 @@ import matplotlib.pyplot as plt
 
 
 class SDF(object):
-    def __init__(self, do_randomize_unknown_spaces, prepare_random_data=True):
+    def __init__(self, do_randomize_unknown_spaces=False,
+                 prepare_random_data=False, prepare_data_from_matlab=False, prepare_data_from_sim=False):
         self.dataloader = None
         self.testloader = None
         self.training_set = None
         self.validation_set = None
         self.do_randomize_unknown_spaces = do_randomize_unknown_spaces
+        self.prepare_data_from_sim = prepare_data_from_sim
         if prepare_random_data:
             self._prepare_data_random()
         else:
@@ -33,12 +35,19 @@ class SDF(object):
     def _prepare_data(self):
         print("Loading data now")
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        self.training_set = pickle.load(open(os.path.join(current_dir, "../data/SDF/training/pickled/maps"), "rb"))
-        self.validation_set = pickle.load(open(os.path.join(current_dir, "../data/SDF/validation/pickled/maps"), "rb"))
         if self.do_randomize_unknown_spaces:
+            self.training_set = pickle.load(open(os.path.join(current_dir, "../data/SDF/training/pickled/maps"), "rb"))
+            self.validation_set = pickle.load(
+                open(os.path.join(current_dir, "../data/SDF/validation/pickled/maps"), "rb"))
             self.training_set = self._randomize_unknown_spaces(self.training_set)
             self.validation_set = self._randomize_unknown_spaces(self.validation_set)
+        elif self.prepare_data_from_sim:
+            self.training_set = np.load(os.path.join(current_dir, "../data/random_data_sdf/training.npy"))
+            self.validation_set = np.load(os.path.join(current_dir, "../data/random_data_sdf/validation.npy"))
         else:
+            self.training_set = pickle.load(open(os.path.join(current_dir, "../data/SDF/training/pickled/maps"), "rb"))
+            self.validation_set = pickle.load(
+                open(os.path.join(current_dir, "../data/SDF/validation/pickled/maps"), "rb"))
             self.training_set = self._add_unknown_spaces_channel(self.training_set)
             self.validation_set = self._add_unknown_spaces_channel(self.validation_set)
         print("Finished loading data")
@@ -93,7 +102,7 @@ class SDF(object):
             unknown_space_indicator[:, 0, row_indicies[0]:row_indicies[1], col_indicies[0]:col_indicies[1]] = 0
             output[:, 0, row_indicies[0]:row_indicies[1], col_indicies[0]:col_indicies[1]] = 0
         output = np.concatenate((output, unknown_space_indicator), axis=1)
-        return output
+        return output[:, :, :128, :128]
 
     def _add_unknown_spaces_channel(self, data):
         output = np.expand_dims(data, axis=1)
