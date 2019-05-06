@@ -34,34 +34,46 @@ class RobotEnv(gym.Env):
         logging.info("TSDF_explore - Version {}".format(self.__version__))
         self.current_step = 0
         rospy.init_node('voxblox_rl_simulator', anonymous=True, log_level=rospy.ERROR)
-        self.uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        loggers = [name for name in logging.root.manager.loggerDict]
-        for logger_name in loggers:
-            logging.getLogger(logger_name).setLevel(logging.CRITICAL)
-        self.launch = roslaunch.parent.ROSLaunchParent(self.uuid, [os.path.join(current_dir, "resources/simulator_2D.launch")])
-        self.launch.start()
-        # rospy.loginfo("started the simulator")
-        #TODO: Quit logging from ROS
-        logging.getLogger('rosout').setLevel(logging.CRITICAL)
-        rospy.wait_for_service('/voxblox_rl_simulator/simulation/move')
-        rospy.wait_for_service('/voxblox_rl_simulator/simulation/reset')
-        rospy.wait_for_service('/voxblox_rl_simulator/simulation/reset_observed_map')
-        self.do_simulation = rospy.ServiceProxy('/voxblox_rl_simulator/simulation/move', Move)
-        self.do_reset = rospy.ServiceProxy('/voxblox_rl_simulator/simulation/reset', Empty)
-        self.do_reset_observed_map = rospy.ServiceProxy('/voxblox_rl_simulator/simulation/reset_observed_map', Empty)
-
         self.robot = Robot(name='explorer')
         #TODO:define action space remember to add restriction of not moving
         high = np.array([10.0, 10.0, np.pi])
         low = np.array([-10.0, -10.0, -np.pi])
         self.esdf_map_length = 128
         self.action_space = spaces.Box(low=low, high=high, dtype=np.float32)
-        self.observation_space = spaces.Box(-1000, 1000, shape=[self.esdf_map_length, self.esdf_map_length], dtype=np.float32)
+        self.observation_space = spaces.Box(-1000, 1000, shape=[self.esdf_map_length, self.esdf_map_length, 1], dtype=np.float32)
         self.observations_encoder = None
         self.set_gpu_on = False
         self.episode_num = 1
+        loggers = [name for name in logging.root.manager.loggerDict]
+        for logger_name in loggers:
+            logging.getLogger(logger_name).setLevel(logging.CRITICAL)
         return
+
+    def initialize_environment(self, name_space):
+        name_space = str(name_space)
+        self.uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        cli_args = [os.path.join(current_dir, "resources/simulator_2D.launch"), 'namespace:=' + name_space]
+        roslaunch_args = cli_args[1:]
+        roslaunch_file = [(roslaunch.rlutil.resolve_launch_arguments(cli_args)[0], roslaunch_args)]
+        self.launch = roslaunch.parent.ROSLaunchParent(self.uuid, roslaunch_file)
+        self.launch.start()
+        # rospy.loginfo("started the simulator")
+        # TODO: Quit logging from ROS
+        logging.getLogger('rosout').setLevel(logging.CRITICAL)
+        rospy.wait_for_service("/" + name_space + '/voxblox_rl_simulator/simulation/move')
+        rospy.wait_for_service("/" + name_space + '/voxblox_rl_simulator/simulation/reset')
+        rospy.wait_for_service("/" + name_space + '/voxblox_rl_simulator/simulation/reset_observed_map')
+        rospy.wait_for_service("/" + name_space + '/voxblox_rl_simulator/simulation/reset_robot_state')
+        rospy.wait_for_service("/" + name_space + '/voxblox_rl_simulator/simulation/set_random_starting_robot_pose')
+        self.do_simulation = rospy.ServiceProxy("/" + name_space + '/voxblox_rl_simulator/simulation/move', Move)
+        self.do_reset = rospy.ServiceProxy("/" + name_space + '/voxblox_rl_simulator/simulation/reset', Empty)
+        self.do_reset_observed_map = rospy.ServiceProxy(
+            "/" + name_space + '/voxblox_rl_simulator/simulation/reset_observed_map', Empty)
+        self.do_reset_state = rospy.ServiceProxy(
+            "/" + name_space + '/voxblox_rl_simulator/simulation/reset_robot_state', Empty)
+        self.do_set_random_starting_pose = rospy.ServiceProxy(
+            "/" + name_space + '/voxblox_rl_simulator/simulation/set_random_starting_robot_pose', Empty)
 
     def render(self, mode='human'):
         return
@@ -103,6 +115,16 @@ class RobotEnv(gym.Env):
         print("FINISHED RESET")
         return self._get_obs()
 
+    def reset_state(self):
+        print("RESET STATE")
+        print("Episode number {} ".format(self.episode_num - 1))
+        self.current_step = 0
+        self.do_reset_state()
+        self.robot.reset()
+        self._take_action(self.robot.default_action)
+        print("FINISHED RESET")
+        return self._get_obs()
+
     def _take_action(self, action):
         #TODO: double check if the action of type Transform
         #wrap the action into an actual message
@@ -131,8 +153,10 @@ class RobotEnv(gym.Env):
                 result = self.observations_encoder.encode(inputs)
             return result.cpu().data.numpy()
         else:
-            print("Observed Voxels SO FAR is ", self.observations['submap'][:, :])
-            return np.array(self.observations['submap'][:, :])
+            observations = np.array(self._prepare_esdf_map_shape(self.observations['submap'][:, :]))
+            observations = np.expand_dims(observations, axis=2)
+            print("Observed Voxels SO FAR is ", observations.shape)
+            return observations
 
     def _prepare_esdf_map_shape(self, esdf_map):
         #check for height
