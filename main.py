@@ -19,19 +19,13 @@ from stable_baselines import PPO2, DDPG
 from TSDF_explore.state_encoder.encoding_state import EncodingState
 from TSDF_explore.policies.policy_loader import ModelLoader
 from TSDF_explore.ros_recorder.data_recorder import DataRecorder
+from tensorboardX import SummaryWriter
+import os
+import shutil
 from TSDF_explore.benchmark.deploy import BenchMark
 import time
 from stable_baselines.ddpg.noise import NormalActionNoise, OrnsteinUhlenbeckActionNoise, AdaptiveParamNoiseSpec
-
-
-def make_env(rank, seed=0):
-    def _init():
-        env = gym.make('TSDF_explore-v0')
-        env.seed(seed + rank)
-        env.initialize_environment(rank)
-        return env
-    set_global_seeds(seed)
-    return _init
+from TSDF_explore.train.train_ppo2 import train_exploring_policy_parallel
 
 
 def train_encoder():
@@ -44,17 +38,6 @@ def test_encoder():
     state_model.test(model_path="pretrained_models/state_autoencoder_v4.pth", gpu=True)
 
 
-def train_exploring_policy_parallel():
-    num_cpu = 4
-    env = SubprocVecEnv([make_env(rank=i) for i in range(num_cpu)])
-    model = PPO2(CnnPolicy, env, verbose=1, tensorboard_log="./logs/")
-    model.learn(total_timesteps=100000)  # multuple of 128
-    print("Finished training")
-    print("Saving the model")
-    model.save("model_v2_non_encoded_state_CNN")
-    return model, env
-
-
 def train_exploring_policy():
     env = gym.make('TSDF_explore-v0')
     model_loader = ModelLoader(model_class="state_encoder_v1",
@@ -63,6 +46,7 @@ def train_exploring_policy():
     # env.set_gpu()
 
     env.initialize_environment(name_space=1)
+    # env.set_overfit_to_one_map()
     env = DummyVecEnv([lambda: env])
     # the noise objects for DDPG
     # n_actions = env.action_space.shape[-1]
@@ -72,57 +56,11 @@ def train_exploring_policy():
     # model = DDPG(LnCnnPolicy, env, verbose=1, param_noise=param_noise, action_noise=action_noise)
 
     model = PPO2(CnnPolicy, env, verbose=1, tensorboard_log="./logs/")
-    model.learn(total_timesteps=100000) #multuple of 128
+    model.learn(total_timesteps=100) #multuple of 128
     print("Finished training")
     print("Saving the model")
     model.save("model_v2_non_encoded_state_CNN")
     return model, env
-
-
-def evaluate(env, model, num_steps=1000):
-    """
-    Evaluate a RL agent
-    :param model: (BaseRLModel object) the RL Agent
-    :param num_steps: (int) number of timesteps to evaluate it
-    :return: (float) Mean reward for the last 100 episodes
-    """
-    episode_rewards = [0.0]
-    obs = env.reset()
-    for i in range(num_steps):
-        # _states are only useful when using LSTM policies
-        print("time step number {}".format(i))
-        action, _states = model.predict(obs)
-        # here, action, rewards and dones are arrays
-        # because we are using vectorized env
-        obs, rewards, dones, info = env.step(action)
-
-        # Stats
-        episode_rewards[-1] += rewards[0]
-        if dones[0] and i < num_steps - 1:
-            # obs = env.reset() #environment already did reset
-            episode_rewards.append(0.0)
-    # Compute mean reward for the last 100 episodes
-    mean_100ep_reward = round(np.mean(episode_rewards[-100:]), 1)
-    print("Mean reward:", mean_100ep_reward, "Num episodes:", len(episode_rewards))
-
-    return mean_100ep_reward
-
-
-def test_exploring_policy():
-    env = gym.make('TSDF_explore-v0')
-    model_loader = ModelLoader(model_class="state_encoder_v1",
-                               trained_model_path="pretrained_models/state_autoencoder_v4.pth", gpu=True)
-    env.set_observations_encoder(model_loader.get_inference_model())
-    env.set_gpu()
-    env = DummyVecEnv([lambda: env])
-
-    model = PPO2(MlpPolicy, env, verbose=1, tensorboard_log="./logs/")
-    model.load("model_v1")
-    print("Finished training")
-    print("Saving the model")
-    model.save("model_v1")
-    mean_100ep_reward = evaluate(env, model)
-    return mean_100ep_reward
 
 
 def record_random_dataset():
@@ -132,11 +70,11 @@ def record_random_dataset():
 
 def main():
     # record_random_dataset()
-    #benchmark = BenchMark()
-    #benchmark.add_mlp_non_encoder_policy()
+    # benchmark = BenchMark()
+    # benchmark.add_mlp_non_encoder_policy()
     # benchmark.add_mlp_non_encoder_policy()
     # benchmark.add_random_policy()
-    #print("EVALUATED THE POLICY: {}".format(benchmark.evaluate()))
+    # print("EVALUATED THE POLICY: {}".format(benchmark.evaluate(num_episodes=500)))
     # test_encoder()
     train_exploring_policy_parallel()
     # print("EVALUATED THE POLICY: {}".format(test_exploring_policy()))
