@@ -3,8 +3,8 @@ import numpy as np
 
 class RandomPolicy(object):
     def __init__(self):
-        self.high = np.array([10.0, 10.0, np.pi])
-        self.low = np.array([-10.0, -10.0, -np.pi])
+        self.high = np.array([1.0, 1.0, np.pi])
+        self.low = np.array([-1.0, -1.0, -np.pi])
         self.randomization = 'unifrom'
 
     def predict(self, obs):

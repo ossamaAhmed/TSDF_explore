@@ -90,8 +90,8 @@
     <param name="sim_map_boundary_min_y" value="-50"/>
     <param name="sim_map_boundary_min_z" value="0"/>
     <!-- Object number and placement -->
-    <param name="sim_max_number_objects_per_type" value="100"/>
-    <param name="sim_max_size_object_relative_to_map" value="0.2"/>
+    <param name="sim_max_number_objects_per_type" value="40"/>
+    <param name="sim_max_size_object_relative_to_map" value="0.1"/>
     <param name="sim_min_distance_to_map_boundary" value="0.2"/>
     <param name="sim_min_object_size" value="0.4"/>
     <!-- Viewpoint sampling -->
@@ -103,7 +103,7 @@
     Should be shorter than 'sim_depth_camera_max_range_m', rays that are longer
     than this will be integrated as -->
     <param name="max_ray_length_m" value="6.0" />
-    <param name="sim_depth_camera_max_range_m" value="12.0"/>
+    <param name="sim_depth_camera_max_range_m" value="100.0"/>
 
     <param name="sim_viewpoint_sampling_angle_delta_rad" value="0.26"/> <!-- 15 deg -->
     <param name="sim_viewpoint_sampling_position_delta_m" value="0.15"/>

@@ -12,10 +12,11 @@ import numpy as np
 import gym
 import gym_TSDF_explore
 from stable_baselines.common import set_global_seeds
-from stable_baselines.common.policies import MlpPolicy, CnnPolicy, CnnLstmPolicy
+#from stable_baselines.common.policies import MlpPolicy, CnnPolicy, CnnLstmPolicy
+from stable_baselines.sac.policies import MlpPolicy, CnnPolicy
 from stable_baselines.ddpg.policies import LnCnnPolicy
 from stable_baselines.common.vec_env import DummyVecEnv, SubprocVecEnv
-from stable_baselines import PPO2, DDPG
+from stable_baselines import PPO2, DDPG, SAC
 from gym_TSDF_explore.configs.env_config import ENV_CONFIG
 from TSDF_explore.state_encoder.encoding_state import EncodingState
 from TSDF_explore.policies.policy_loader import ModelLoader
@@ -26,7 +27,7 @@ import os
 import shutil
 from TSDF_explore.policies.random_policy import RandomPolicy
 
-logging_global_dir = "./logs/ppo2_policy/"
+logging_global_dir = "./logs/sac_policy_scaled_actions_10_2/"
 
 
 def make_env(rank, seed=0):
@@ -39,6 +40,10 @@ def make_env(rank, seed=0):
         tf_writer = SummaryWriter(log_dir=trajectory_info_dir)
         env.initialize_environment(name_space=rank, tf_writer=tf_writer, trajectory_info_dir=trajectory_info_dir,
                                    save_trajectory_info=True, visualize_plots=True)
+        model_loader = ModelLoader(model_class="state_encoder_v1",
+                                   trained_model_path="pretrained_models/state_autoencoder_v4.pth", gpu=True)
+        # env.set_observations_encoder(model_loader.get_inference_model())
+        # env.set_gpu()
         env.set_training_mode()
         # env.set_overfit_to_one_map()
         return env
@@ -76,12 +81,16 @@ def evaluate_episode(env, model, num_steps=None):
 
 def train_exploring_policy_parallel():
 
-    num_cpu = 4
-    validate_every_timesteps = 256 * num_cpu
-    total_time_steps = 100000
+    num_cpu = 1
+    validate_every_timesteps = 2000 * num_cpu
+    total_time_steps = 30000000
     # spawn a new environment
     env = SubprocVecEnv([make_env(rank=i) for i in range(num_cpu)])
-    model = PPO2(CnnPolicy, env, verbose=1, tensorboard_log=logging_global_dir)
+    model = SAC(CnnPolicy, env, train_freq=2000,learning_rate=0.001, gradient_steps=50,  full_tensorboard_log=True, verbose=1, tensorboard_log=logging_global_dir)
+    #model = PPO2(CnnPolicy, env, gamma=0.9988, n_steps=2000, ent_coef=0.001, learning_rate=0.001, vf_coef=0.99,
+    #             max_grad_norm=0.1, lam=0.95, nminibatches=1, noptepochs=50, cliprange=0.2,
+     #            _init_setup_model=True,
+      #           full_tensorboard_log=True, verbose=1, tensorboard_log=logging_global_dir)
     testing_env = gym.make('TSDF_explore-v0')
     trajectory_info_dir = os.path.join(logging_global_dir + 'environment_logging_validation')
     if os.path.exists(trajectory_info_dir):
@@ -96,9 +105,9 @@ def train_exploring_policy_parallel():
         model.learn(total_timesteps=validate_every_timesteps, tb_log_name="ppo2_non_encoded_state",
                     reset_num_timesteps=False)  # multiple of 128
         print("Saving the model")
-        model.save("model_v3")
+        model.save("sac_policy_scaled_actions_10_2")
         print("Validating")
-        validation_model = PPO2.load("model_v3")
+        validation_model = SAC.load("sac_policy_scaled_actions_10_2")
         random_policy_model = RandomPolicy()
         policy_models = [validation_model, random_policy_model]
         num_episodes_to_run = 30
@@ -114,5 +123,5 @@ def train_exploring_policy_parallel():
                                         np.mean(episode_mean_rewards[:, 1]), (i+1) * validate_every_timesteps)
         validation_tf_writer.add_scalar('data/validation_reward_trained_policy',
                                         np.mean(episode_mean_rewards[:, 0]), (i+1) * validate_every_timesteps)
-        time.sleep(5)
+        time.sleep(2)
     return

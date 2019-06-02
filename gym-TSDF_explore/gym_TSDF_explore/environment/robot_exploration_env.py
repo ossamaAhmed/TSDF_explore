@@ -48,6 +48,7 @@ class RobotEnv(gym.Env):
         self.low = np.array([-10.0, -10.0, -np.pi])
         self.esdf_map_length = 128
         self.action_space = spaces.Box(low=self.low / self.action_scaling_factors, high=self.high / self.action_scaling_factors, dtype=np.float32)
+        #self.action_space = spaces.Box(low=self.low, high=self.high, dtype=np.float32)
         self.observation_space = spaces.Box(-1000, 1000, shape=[self.esdf_map_length, self.esdf_map_length, 1], dtype=np.float32)
         self.observations_encoder = None
         self.set_gpu_on = False
@@ -55,21 +56,21 @@ class RobotEnv(gym.Env):
         self.world_map = None
         self.observed_world_map = None
         self.current_location = None
-        self.save_trajectory_info = False
+
         self.tf_writer = None
         self.overfit_to_one_map = False
         self.namespace = None
-        self.logging_iter = 50
+        self.logging_iter = 500
         self.trajectory_info_dir = None
         self.visualize_plots = True
         self.validation_mode = False
-
         #logging stuff variables
         self.location_history = []
         self.path = []
         self.executed_actions_history = []
         self.actions_history = []
 
+        self.save_trajectory_info = False
         self.env_location_history = []
         self.env_path = []
         self.env_executed_actions_history = []
@@ -158,7 +159,7 @@ class RobotEnv(gym.Env):
         # ax1.scatter([30, 30], [30, 60], marker='*', s=100, color='yellow')
         ax.plot(self.path[:, 0], self.path[:, 1], '--gs', lw=6, marker='*', color='green')
         # ax1.plot(self.path[:, 0], self.path[:, 1], 'k-', lw=10)
-        plt.show(block=False)
+        #plt.show(block=False)
 
         self.tf_writer.add_image("maps/world_map", self._convert_plot_to_image(figure=fig),
                                  global_step=self.global_step, dataformats='HWC')
@@ -168,7 +169,7 @@ class RobotEnv(gym.Env):
         ax.set_title('observed_world_map')
         sns.heatmap(self.observed_world_map[0, :, :], ax=ax)
         ax.plot(self.path[:, 0], self.path[:, 1], '--gs', lw=6, marker='*', color='green')
-        plt.show(block=False)
+        #plt.show(block=False)
         self.tf_writer.add_image("maps/observed_world_map", self._convert_plot_to_image(figure=fig),
                                  global_step=self.global_step, dataformats='HWC')
 
@@ -179,7 +180,7 @@ class RobotEnv(gym.Env):
         ax.plot(self.location_history[:, 0], self.location_history[:, 1], '--gs', lw=2, marker='*', color='green')
         for i, txt in enumerate(self.location_history[:, 0]):
             ax.annotate(i, (self.location_history[:, 0][i], self.location_history[:, 1][i]))
-        plt.show(block=False)
+        #plt.show(block=False)
         self.tf_writer.add_image("trajectories/raw_locations", self._convert_plot_to_image(figure=fig),
                                  global_step=self.global_step, dataformats='HWC')
 
@@ -190,7 +191,7 @@ class RobotEnv(gym.Env):
         ax.plot(self.path[:, 0], self.path[:, 1], '--gs', lw=2, marker='*', color='green')
         for i, txt in enumerate(self.path[:, 0]):
             ax.annotate(i, (self.path[:, 0][i], self.path[:, 1][i]))
-        plt.show(block=False)
+        #plt.show(block=False)
         self.tf_writer.add_image("trajectories/processed_locations", self._convert_plot_to_image(figure=fig),
                                  global_step=self.global_step, dataformats='HWC')
 
@@ -199,7 +200,7 @@ class RobotEnv(gym.Env):
         ax.set_title('actions histogram')
 
         ax.hist(self.actions_history[:, 0:2], bins=np.arange(self.low[0], self.high[0] + 1))
-        plt.show(block=False)
+        #plt.show(block=False)
         self.tf_writer.add_image("histograms/actions_histogram", self._convert_plot_to_image(figure=fig),
                                  global_step=self.global_step, dataformats='HWC')
 
@@ -208,7 +209,7 @@ class RobotEnv(gym.Env):
         ax.set_title('rotational actions histogram')
 
         ax.hist(self.actions_history[:, 2], bins=np.arange(round(self.low[-1]), round(self.high[-1] + 1)))
-        plt.show(block=False)
+        #plt.show(block=False)
         self.tf_writer.add_image("histograms/rotational_actions_histogram", self._convert_plot_to_image(figure=fig),
                                  global_step=self.global_step, dataformats='HWC')
 
@@ -261,8 +262,11 @@ class RobotEnv(gym.Env):
 
     def step(self, action):
         action = [action[0]*self.action_scaling_factors[0],
-                  action[1]*self.action_scaling_factors[1],
-                  action[2]*self.action_scaling_factors[2]]
+                   action[1]*self.action_scaling_factors[1],
+                   action[2]*self.action_scaling_factors[2]]
+        #action = [action[0],
+        #          action[1],
+        #          action[2]]
         print("Action is : ", action)
         if not self.validation_mode:
             self.actions_history.append(action)
@@ -275,8 +279,12 @@ class RobotEnv(gym.Env):
         self.global_step += 1
         ob = self._get_obs()
         reward = self._calculate_reward()
+        survival_reward = 0.5
+        reward += survival_reward
         print("reward ", reward)
-        done = self._is_done()
+        done, terminal_reward = self._is_done()
+        if done:
+            reward = terminal_reward
         return ob, reward, done, {}
 
     def set_overfit_to_one_map(self):
@@ -365,7 +373,7 @@ class RobotEnv(gym.Env):
             result_map = esdf_map[:self.esdf_map_length, :]
         elif esdf_map.shape[0] < self.esdf_map_length:
             missing_values = np.zeros(shape=[self.esdf_map_length - esdf_map.shape[0],
-                                             esdf_map.shape[1]], dtype=np.float64)
+                                             esdf_map.shape[1], 1], dtype=np.float64)
             result_map = np.append(esdf_map, missing_values, axis=0)
         else:
             result_map = esdf_map
@@ -375,7 +383,7 @@ class RobotEnv(gym.Env):
             result_map = result_map[:, :self.esdf_map_length]
         elif result_map.shape[1] < self.esdf_map_length:
             missing_values = np.zeros(shape=[result_map.shape[0],
-                                             self.esdf_map_length - esdf_map.shape[1]], dtype=np.float64)
+                                             self.esdf_map_length - result_map.shape[1], 1], dtype=np.float64)
             result_map = np.append(result_map, missing_values, axis=1)
         else:
             result_map = result_map
@@ -401,21 +409,28 @@ class RobotEnv(gym.Env):
         print("Step number {} ".format(self.current_step))
         if self.current_step >= 20:
             self.get_observed_world_map()
-            if self.save_trajectory_info and self.episode_num%self.logging_iter == 0 and not self.validation_mode:
+            if self.episode_num%self.logging_iter == 0 and not self.validation_mode:
                 print("Saving trajectories history information")
                 time.sleep(3)
                 if self.visualize_plots:
                     self._visualize_world_map()  # TODO: MOVE THIS
-                np.save(os.path.join(self.trajectory_info_dir, "path"), np.array(self.env_path))
-                np.save(os.path.join(self.trajectory_info_dir, "locations_history"), np.array(self.env_location_history))
-                np.save(os.path.join(self.trajectory_info_dir, "actions_history"), np.array(self.env_actions_history))
-                np.save(os.path.join(self.trajectory_info_dir, "executed_actions_history"),
-                        np.array(self.env_executed_actions_history))
-                np.save(os.path.join(self.trajectory_info_dir, "env_maps_history"),
-                        np.array(self.env_maps_history))
-                np.save(os.path.join(self.trajectory_info_dir, "env_observed_maps_history"),
-                        np.array(self.env_observed_maps_history))
-            if not self.validation_mode:
+                if self.save_trajectory_info:
+                    np.save(os.path.join(self.trajectory_info_dir, "path"), np.array(self.env_path))
+                    np.save(os.path.join(self.trajectory_info_dir, "locations_history"), np.array(self.env_location_history))
+                    np.save(os.path.join(self.trajectory_info_dir, "actions_history"), np.array(self.env_actions_history))
+                    np.save(os.path.join(self.trajectory_info_dir, "executed_actions_history"),
+                            np.array(self.env_executed_actions_history))
+                    np.save(os.path.join(self.trajectory_info_dir, "env_maps_history"),
+                            np.array(self.env_maps_history))
+                    np.save(os.path.join(self.trajectory_info_dir, "env_observed_maps_history"),
+                            np.array(self.env_observed_maps_history))
+                    self.env_path = []
+                    self.env_location_history = []
+                    self.env_actions_history = []
+                    self.env_executed_actions_history = []
+                    self.env_maps_history = []
+                    self.env_observed_maps_history = []
+            if self.save_trajectory_info and self.validation_mode:
                 self.env_path.append(self.path)
                 self.env_location_history.append(self.location_history)
                 self.env_actions_history.append(self.actions_history)
@@ -426,9 +441,9 @@ class RobotEnv(gym.Env):
             self.location_history = []
             self.actions_history = []
             self.executed_actions_history = []
-            return True
+            return True, -10.0
         else:
-            return False
+            return False, 0
 
     def move(self):
         pass
